@@ -1,8 +1,5 @@
 from .metric import *
 from .qmap import *
-
-import seaborn as sns
-import scipy.stats as stats
 from fastai.callbacks import *
 from fastai.callbacks.hooks import layers_info
 
@@ -127,13 +124,6 @@ class IqaLearner(Learner):
         records = [valid_one(data) for data in on]
         return pd.DataFrame(records, index=[data.abbr for data in on])
 
-
-    def jointplot(self, kind="scatter", xlim=(0, 100), ylim=(0, 100), **kwargs):
-        output, target = self.get_np_preds()  # TODO note here only output 1 scores
-        sns.set(style="white", color_codes=True)
-        g = sns.jointplot(output, target,
-                          kind=kind, xlim=xlim, ylim=ylim, **kwargs)
-        return g.set_axis_labels("output", "target").annotate(stats.pearsonr)
 
     def predict_quality_map(self, img, blk_size=None):
         if blk_size is None:

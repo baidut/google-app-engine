@@ -1,0 +1,4 @@
+numpy==1.16.0rc1
+fastai
+flask
+scipy

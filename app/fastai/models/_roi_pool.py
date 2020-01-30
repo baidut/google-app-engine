@@ -1,8 +1,12 @@
 import sys, os
 
-# RoIPool
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/faster-rcnn.pytorch/lib")
-from model.roi_layers import ROIPool, ROIAlign  # PyTorch 1.0 specific!
+########################## ROIPOOL<
+# import sys, os
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/faster-rcnn.pytorch/lib")
+# from model.roi_layers import ROIPool, ROIAlign  # PyTorch 1.0 specific!
+########################## >ROIPOOL
+
+from .roi_layers import ROIPool, ROIAlign  # PyTorch 1.0 specific!
 
 from .bunches._rois import Rois0123
 from ._body_head import BodyHeadModel, num_features_model
