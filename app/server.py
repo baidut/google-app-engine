@@ -1,53 +1,52 @@
-from starlette.applications import Starlette
-from starlette.responses import HTMLResponse, JSONResponse
-from starlette.staticfiles import StaticFiles
-from starlette.middleware.cors import CORSMiddleware
-import uvicorn, aiohttp, asyncio
-from io import BytesIO
+import io
+import json
 
-from fastai.vision import *
+from torchvision import models
+import torchvision.transforms as transforms
+from PIL import Image
+from flask import Flask, jsonify, request, make_response
 
-model_file_url = 'https://www.dropbox.com/s/y4kl2gv1akv7y4i/stage-2.pth?raw=1'
-model_file_name = 'model'
-classes = ['black', 'grizzly', 'teddys']
-path = Path(__file__).parent
+from PIL import Image as PIL_Image
+from fastiqa.basics import *
+from fastiqa.models.bunches import Im2MOS
+from fastiqa.models._body_head import BodyHeadModel
 
-app = Starlette()
-app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_headers=['X-Requested-With', 'Content-Type'])
-app.mount('/static', StaticFiles(directory='app/static'))
+app = Flask(__name__)
 
-async def download_file(url, dest):
-    if dest.exists(): return
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.read()
-            with open(dest, 'wb') as f: f.write(data)
+@app.route('/predict', methods=['GET','POST'])
+def predict():
+    if request.method == 'POST':
+        # file = request.files['file']
+        #img_bytes = file.read()
+        img = PIL_Image.open(request.files['file'].stream)
+        print(img.mode)
+        print(img.size)
+        
+#         data = {'score': img.mode, 
+#                 'message': 'Created', 'code': 'SUCCESS',
+#                 'success': True, 'status': 'OK',
+#                 'ContentType':'application/json'
+#                }
+#         return make_response(jsonify(data), 200) # 201
+        im = Image(pil2tensor(img, dtype=np.float32))
+        
+        data = Im2MOS(TestImages)
+        model = BodyHeadModel() # RoIPoolModel()
 
-async def setup_learner():
-    await download_file(model_file_url, path/'models'/f'{model_file_name}.pth')
-    data_bunch = ImageDataBunch.single_from_classes(path, classes,
-        ds_tfms=get_transforms(), size=224).normalize(imagenet_stats)
-    learn = create_cnn(data_bunch, models.resnet34, pretrained=False)
-    learn.load(model_file_name)
-    return learn
+        learn = IqaLearner(data, model, path='.') 
+        #learn.load('RoIPoolModel-fit(10,bs=120)')
 
-loop = asyncio.get_event_loop()
-tasks = [asyncio.ensure_future(setup_learner())]
-learn = loop.run_until_complete(asyncio.gather(*tasks))[0]
-loop.close()
+        # im = open_image(file)
+        score = learn.predict(im)[0].obj[0]
+        data = {'score': score, 
+                'message': 'Created', 'code': 'SUCCESS',
+                'success': True, 'status': 'OK',
+                'ContentType':'application/json'
+               }
+        # class_id, class_name = get_prediction(image_bytes=img_bytes)
+        return make_response(jsonify(data), 200) # 201
+        
 
-@app.route('/')
-def index(request):
-    html = path/'view'/'index.html'
-    return HTMLResponse(html.open().read())
-
-@app.route('/analyze', methods=['POST'])
-async def analyze(request):
-    data = await request.form()
-    img_bytes = await (data['file'].read())
-    img = open_image(BytesIO(img_bytes))
-    return JSONResponse({'result': learn.predict(img)[0]})
 
 if __name__ == '__main__':
-    if 'serve' in sys.argv: uvicorn.run(app, host='0.0.0.0', port=8080)
-
+    app.run()
