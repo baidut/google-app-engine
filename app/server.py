@@ -3,7 +3,6 @@ import json
 
 from torchvision import models
 import torchvision.transforms as transforms
-from PIL import Image
 from flask import Flask, jsonify, request, make_response
 
 from PIL import Image as PIL_Image
